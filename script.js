@@ -29,8 +29,7 @@ function generateHINs() {
     const copyButton = document.getElementById('copyButton');
     
     hinList.innerHTML = '';
-    const hins = [];
-
+    
     for (let i = 0; i < 5; i++) {
         let hin = '';
         const serial = generateSerialNumber();
@@ -66,24 +65,30 @@ function generateHINs() {
 
         const hinDiv = document.createElement('div');
         hinDiv.className = 'hin-item';
-        hinDiv.textContent = hin;
+        
+        // Create container for HIN and copy button
+        const hinContent = document.createElement('span');
+        hinContent.textContent = hin;
+        hinDiv.appendChild(hinContent);
+
+        // Create copy button for this specific HIN
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.textContent = 'Copy';
+        copyBtn.onclick = function() {
+            navigator.clipboard.writeText(hin).then(() => {
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                }, 2000);
+            });
+        };
+        hinDiv.appendChild(copyBtn);
+        
         hinList.appendChild(hinDiv);
-        hins.push(hin);
     }
 
-    copyButton.style.display = 'block';
-    copyButton.setAttribute('data-hins', hins.join('\n'));
-}
-
-function copyHINs() {
-    const copyButton = document.getElementById('copyButton');
-    const hins = copyButton.getAttribute('data-hins');
-    
-    navigator.clipboard.writeText(hins).then(() => {
-        const originalText = copyButton.textContent;
-        copyButton.textContent = 'Copied!';
-        setTimeout(() => {
-            copyButton.textContent = originalText;
-        }, 2000);
-    });
+    // Remove the global copy button since we now have individual ones
+    copyButton.style.display = 'none';
 } 

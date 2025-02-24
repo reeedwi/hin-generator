@@ -73,13 +73,29 @@ button:hover {
     font-family: monospace;
     font-size: 18px;
     letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-#copyButton {
-    margin-top: 20px;
+.copy-btn {
     background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 15px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 15px;
+    width: auto;
+    margin-bottom: 0;
 }
 
-#copyButton:hover {
+.copy-btn:hover {
     background-color: #218838;
+}
+
+/* Remove the global copy button styles since we're not using it anymore */
+#copyButton {
+    display: none;
 } 
