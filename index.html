@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIN Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Hull Identification Number Generator</h1>
+        
+        <div class="form-group">
+            <label for="format">HIN Format:</label>
+            <select id="format" onchange="updateOptions()">
+                <option value="current">Current Format (1984-Present)</option>
+                <option value="modelYear">Model Year Format (1972-1984)</option>
+                <option value="straightYear">Straight Year Format (1972-1984)</option>
+                <option value="state">State-Assigned Format</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="manufacturerGroup">
+            <label for="manufacturer">Manufacturer:</label>
+            <select id="manufacturer">
+                <option value="SER">Sea Ray Boats Inc.</option>
+                <option value="BMC">Bayliner Marine Corporation</option>
+                <option value="BWC">Boston Whaler Inc.</option>
+                <option value="GWT">Grady-White Boats Inc.</option>
+                <option value="TTM">Tracker Marine</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="stateGroup" style="display: none;">
+            <label for="state">State:</label>
+            <select id="state">
+                <option value="MIZ">Mississippi</option>
+                <option value="MNZ">Minnesota</option>
+                <option value="LAZ">Louisiana</option>
+            </select>
+        </div>
+
+        <button onclick="generateHINs()">Generate HINs</button>
+
+        <div class="results" id="results">
+            <div class="hin-list" id="hinList"></div>
+            <button id="copyButton" onclick="copyHINs()" style="display: none;">Copy All HINs</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 
