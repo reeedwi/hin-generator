@@ -105,13 +105,36 @@ function switchTab(tabName) {
     document.getElementById(`${tabName}-section`).classList.add('active');
 }
 
-const MANUFACTURERS = {
-    'SER': 'Sea Ray Boats Inc.',
-    'BMC': 'Bayliner Marine Corporation',
-    'BWC': 'Boston Whaler Inc.',
-    'GWT': 'Grady-White Boats Inc.',
-    'TTM': 'Tracker Marine'
-};
+const MANUFACTURERS = {};
+
+// Load MIC data from CSV
+async function loadMICData() {
+    try {
+        const response = await fetch('MIC List - Sheet1.csv');
+        const data = await response.text();
+        const lines = data.split('\n');
+        
+        // Skip header row
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line) {
+                const [mic, company, address, city, state] = line.split(',').map(field => field.replace(/^"|"$/g, '').trim());
+                MANUFACTURERS[mic] = {
+                    name: company,
+                    address: address,
+                    city: city,
+                    state: state
+                };
+            }
+        }
+        console.log('MIC data loaded:', Object.keys(MANUFACTURERS).length, 'manufacturers');
+    } catch (error) {
+        console.error('Error loading MIC data:', error);
+    }
+}
+
+// Load MIC data when the page loads
+window.addEventListener('load', loadMICData);
 
 const STATES = {
     'MIZ': 'Mississippi',
@@ -224,7 +247,7 @@ function parseHIN(hin) {
     let modelYearDisplay = '';
     
     if (MANUFACTURERS[mfrCode]) {
-        manufacturer = MANUFACTURERS[mfrCode];
+        manufacturer = MANUFACTURERS[mfrCode].name;
         if (formatCode === 'M') {
             // Model Year Format (1972-1984)
             format = 'Model Year Format (1972-1984)';
@@ -250,16 +273,18 @@ function parseHIN(hin) {
             modelYearDisplay = `20${modelYear}`;
         }
     } else if (STATES[mfrCode]) {
-        manufacturer = `State-Assigned (${STATES[mfrCode]})`;
+        manufacturer = STATES[mfrCode];
         format = 'State-Assigned Format';
-        const stateMonth = 'ABCDEFGHIJKL'.indexOf(formatCode) + 1;
-        productionDate = `${getMonthName(stateMonth)} 20${year.charAt(0)}`;
-        modelYearDisplay = '20' + year;
+        const month = 'ABCDEFGHIJKL'.indexOf(monthCode) + 1;
+        const monthName = getMonthName(month);
+        productionDate = `${monthName} 20${year}`;
+        modelYearDisplay = `20${year}`;
     }
     
     return {
         format,
         manufacturer,
+        mfrCode,
         serial,
         productionDate,
         modelYearDisplay
@@ -269,20 +294,23 @@ function parseHIN(hin) {
 function displayValidHIN(info) {
     const resultsDiv = document.getElementById('decoder-results');
     resultsDiv.className = 'decoder-results valid';
-    
-    // Check if it's Model Year Format
-    const isModelYearFormat = info.format === 'Model Year Format (1972-1984)';
-    const dateLabel = isModelYearFormat ? 'Production Month' : 'Production Date';
-    
     resultsDiv.innerHTML = `
-        <h3>✓ Valid HIN</h3>
-        <ul>
-            <li><strong>Format:</strong> ${info.format}</li>
-            <li><strong>Manufacturer:</strong> ${info.manufacturer}</li>
-            <li><strong>Serial Number:</strong> ${info.serial}</li>
-            <li><strong>${dateLabel}:</strong> ${info.productionDate}</li>
-            <li><strong>Model Year:</strong> ${info.modelYearDisplay}</li>
-        </ul>
+        <div class="decoded-info">
+            <h3>✓ Valid HIN</h3>
+            <p><strong>Format:</strong> ${info.format}</p>
+            <div class="manufacturer-info">
+                <h4>Manufacturer Details</h4>
+                <p><strong>Name:</strong> ${info.manufacturer}</p>
+                ${MANUFACTURERS[info.mfrCode] ? `
+                    <p><strong>Address:</strong> ${MANUFACTURERS[info.mfrCode].address}</p>
+                    <p><strong>City:</strong> ${MANUFACTURERS[info.mfrCode].city}</p>
+                    <p><strong>State:</strong> ${MANUFACTURERS[info.mfrCode].state}</p>
+                ` : ''}
+            </div>
+            <p><strong>Serial Number:</strong> ${info.serial}</p>
+            <p><strong>Production Date:</strong> ${info.productionDate}</p>
+            <p><strong>Model Year:</strong> ${info.modelYearDisplay}</p>
+        </div>
     `;
 }
 
@@ -290,21 +318,23 @@ function displayInvalidHIN(errors) {
     const resultsDiv = document.getElementById('decoder-results');
     resultsDiv.className = 'decoder-results invalid';
     resultsDiv.innerHTML = `
-        <h3>✗ Invalid HIN</h3>
-        <ul>
-            ${errors.map(error => `<li>${error}</li>`).join('')}
-        </ul>
-        <p><strong>Guidance:</strong></p>
-        <ul>
-            <li>HIN must be 12 characters long</li>
-            <li>Use only uppercase letters and numbers</li>
-            <li>First three characters must be a valid manufacturer or state code</li>
-            <li>For Model Year Format:</li>
+        <div class="decoded-info">
+            <h3>✗ Invalid HIN</h3>
             <ul>
-                <li>Character 9 must be 'M'</li>
-                <li>Characters 10-11 must be year (72-84)</li>
-                <li>Character 12 must be month (A=Aug through L=Jul)</li>
+                ${errors.map(error => `<li>${error}</li>`).join('')}
             </ul>
-        </ul>
+            <p><strong>Guidance:</strong></p>
+            <ul>
+                <li>HIN must be 12 characters long</li>
+                <li>Use only uppercase letters and numbers</li>
+                <li>First three characters must be a valid manufacturer or state code</li>
+                <li>For Model Year Format:</li>
+                <ul>
+                    <li>Character 9 must be 'M'</li>
+                    <li>Characters 10-11 must be year (72-84)</li>
+                    <li>Character 12 must be month (A=Aug through L=Jul)</li>
+                </ul>
+            </ul>
+        </div>
     `;
 } 
