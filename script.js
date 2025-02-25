@@ -121,8 +121,10 @@ const STATES = {
 
 function decodeHIN() {
     const hin = document.getElementById('hinInput').value.toUpperCase();
-    const resultsDiv = document.getElementById('decoder-results');
+    console.log('Decoding HIN:', hin);
+    
     const errors = validateHIN(hin);
+    console.log('Validation errors:', errors);
     
     if (errors.length > 0) {
         displayInvalidHIN(errors);
@@ -130,6 +132,7 @@ function decodeHIN() {
     }
     
     const decodedInfo = parseHIN(hin);
+    console.log('Decoded info:', decodedInfo);
     displayValidHIN(decodedInfo);
 }
 
@@ -146,50 +149,48 @@ function validateHIN(hin) {
     
     const mfrCode = hin.substring(0, 3);
     const serial = hin.substring(3, 8);
-    const month = hin.substring(8, 10);
-    const year = hin.substring(10, 12);
+    const formatCode = hin.substring(8, 9);
+    const modelYear = hin.substring(9, 11);
+    const monthCode = hin.substring(11, 12);
+
+    // Debug logging
+    console.log('Validating HIN:', {
+        mfrCode,
+        serial,
+        formatCode,
+        modelYear,
+        monthCode
+    });
 
     if (!MANUFACTURERS[mfrCode] && !STATES[mfrCode]) {
         errors.push('Invalid manufacturer or state code');
     }
 
-    // Updated serial number validation
+    // Serial number validation
     if (!/^[0-9A-HJ-NP-Z]{5}$/.test(serial)) {
         errors.push('Invalid serial number format - must be 5 characters using numbers 0-9 and letters A-Z (excluding I, O, Q)');
     }
 
-    // Validate date codes based on format
-    if (MANUFACTURERS[mfrCode]) {
-        if (month === 'M') {
-            // Model Year Format (1972-1984)
-            const modelYear = parseInt(year);
-            if (modelYear < 72 || modelYear > 84) {
-                errors.push('Invalid model year for Model Year Format (must be 72-84)');
-            }
-        } else if (/^[0-9]{2}$/.test(month)) {
-            // Straight Year Format (1972-1984)
-            const monthNum = parseInt(month);
-            const yearNum = parseInt(year);
-            if (monthNum < 1 || monthNum > 12) {
-                errors.push('Invalid month for Straight Year Format (must be 01-12)');
-            }
-            if (yearNum < 72 || yearNum > 84) {
-                errors.push('Invalid year for Straight Year Format (must be 72-84)');
-            }
-        } else if (/^[A-L]/.test(month.charAt(0))) {
-            // Current Format (1984-Present)
-            if (!/^[0-9]$/.test(month.charAt(1))) {
-                errors.push('Invalid year code for Current Format');
-            }
-            if (!/^[0-9]{2}$/.test(year)) {
-                errors.push('Invalid model year for Current Format');
-            }
-        } else {
-            errors.push('Invalid date code format');
+    // Model Year Format validation
+    if (formatCode === 'M') {
+        const year = parseInt(modelYear);
+        if (year < 72 || year > 84) {
+            errors.push('Invalid model year for Model Year Format (must be 72-84)');
+        }
+        if (!/^[A-L]$/.test(monthCode)) {
+            errors.push('Invalid production month code (A=Aug, B=Sep, C=Oct, D=Nov, E=Dec, F=Jan, G=Feb, H=Mar, I=Apr, J=May, K=Jun, L=Jul)');
         }
     }
     
     return errors;
+}
+
+function getMonthName(month) {
+    const months = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[month - 1] || 'Unknown';
 }
 
 function getModelYearMonth(monthCode) {
@@ -213,8 +214,9 @@ function getModelYearMonth(monthCode) {
 function parseHIN(hin) {
     const mfrCode = hin.substring(0, 3);
     const serial = hin.substring(3, 8);
-    const month = hin.substring(8, 10);
-    const year = hin.substring(10, 12);
+    const formatCode = hin.substring(8, 9);
+    const modelYear = hin.substring(9, 11);
+    const monthCode = hin.substring(11, 12);
     
     let format = '';
     let manufacturer = '';
@@ -222,29 +224,31 @@ function parseHIN(hin) {
     
     if (MANUFACTURERS[mfrCode]) {
         manufacturer = MANUFACTURERS[mfrCode];
-        if (month === 'M') {
+        if (formatCode === 'M') {
             // Model Year Format (1972-1984)
             format = 'Model Year Format (1972-1984)';
-            const monthCode = year.charAt(1);
-            const modelYear = year.charAt(0);
-            productionDate = `Model Year: 19${year} (Production Month: ${getModelYearMonth(monthCode)})`;
-        } else if (/^[0-9]{2}$/.test(month)) {
+            const month = getModelYearMonth(monthCode);
+            productionDate = `Model Year: 19${modelYear} (Production Month: ${month})`;
+        } else if (/^[0-9]{2}$/.test(formatCode + modelYear.charAt(0))) {
             // Straight Year Format (1972-1984)
             format = 'Straight Year Format (1972-1984)';
-            const monthName = new Date(2000, parseInt(month) - 1, 1).toLocaleString('default', { month: 'long' });
+            const month = parseInt(formatCode + modelYear.charAt(0));
+            const year = monthCode + modelYear.charAt(1);
+            const monthName = new Date(2000, month - 1, 1).toLocaleString('default', { month: 'long' });
             productionDate = `${monthName} 19${year}`;
-        } else if (/^[A-L]/.test(month)) {
+        } else if (/^[A-L]/.test(formatCode)) {
             // Current Format (1984-Present)
             format = 'Current Format (1984-Present)';
-            const currentMonth = 'ABCDEFGHIJKL'.indexOf(month.charAt(0)) + 1;
-            const currentYear = '20' + month.charAt(1);
-            productionDate = `${getMonthName(currentMonth)} ${currentYear} (Model Year: 20${year})`;
+            const currentMonth = 'ABCDEFGHIJKL'.indexOf(formatCode) + 1;
+            const currentYear = '20' + modelYear.charAt(0);
+            const myear = monthCode + modelYear.charAt(1);
+            productionDate = `${getMonthName(currentMonth)} ${currentYear} (Model Year: 20${myear})`;
         }
     } else if (STATES[mfrCode]) {
         manufacturer = `State-Assigned (${STATES[mfrCode]})`;
         format = 'State-Assigned Format';
-        const stateMonth = 'ABCDEFGHIJKL'.indexOf(month.charAt(0)) + 1;
-        productionDate = `${getMonthName(stateMonth)} 20${month.charAt(1)}`;
+        const stateMonth = 'ABCDEFGHIJKL'.indexOf(formatCode) + 1;
+        productionDate = `${getMonthName(stateMonth)} 20${modelYear.charAt(0)}`;
     }
     
     return {
@@ -253,10 +257,6 @@ function parseHIN(hin) {
         serial,
         productionDate
     };
-}
-
-function getMonthName(month) {
-    return new Date(2000, month - 1, 1).toLocaleString('default', { month: 'long' });
 }
 
 function displayValidHIN(info) {
@@ -286,7 +286,12 @@ function displayInvalidHIN(errors) {
             <li>HIN must be 12 characters long</li>
             <li>Use only uppercase letters and numbers</li>
             <li>First three characters must be a valid manufacturer or state code</li>
-            <li>Format should match one of the known HIN formats</li>
+            <li>For Model Year Format:</li>
+            <ul>
+                <li>Character 9 must be 'M'</li>
+                <li>Characters 10-11 must be year (72-84)</li>
+                <li>Character 12 must be month (A=Aug through L=Jul)</li>
+            </ul>
         </ul>
     `;
-} 
+}
