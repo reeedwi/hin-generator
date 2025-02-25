@@ -214,13 +214,14 @@ function getModelYearMonth(monthCode) {
 function parseHIN(hin) {
     const mfrCode = hin.substring(0, 3);
     const serial = hin.substring(3, 8);
-    const formatCode = hin.substring(8, 9);
-    const modelYear = hin.substring(9, 11);
-    const monthCode = hin.substring(11, 12);
+    const formatCode = hin.substring(8, 9);    // Single character format code
+    const year = hin.substring(9, 11);         // Year digits
+    const monthCode = hin.substring(11, 12);   // Month code
     
     let format = '';
     let manufacturer = '';
     let productionDate = '';
+    let modelYearDisplay = '';
     
     if (MANUFACTURERS[mfrCode]) {
         manufacturer = MANUFACTURERS[mfrCode];
@@ -228,47 +229,59 @@ function parseHIN(hin) {
             // Model Year Format (1972-1984)
             format = 'Model Year Format (1972-1984)';
             const month = getModelYearMonth(monthCode);
-            productionDate = `Model Year: 19${modelYear} (Production Month: ${month})`;
-        } else if (/^[0-9]{2}$/.test(formatCode + modelYear.charAt(0))) {
+            productionDate = `${month}`;
+            modelYearDisplay = `19${year}`;
+        } else if (/^[0-9]{2}$/.test(formatCode + year.charAt(0))) {
             // Straight Year Format (1972-1984)
             format = 'Straight Year Format (1972-1984)';
-            const month = parseInt(formatCode + modelYear.charAt(0));
-            const year = monthCode + modelYear.charAt(1);
-            const monthName = new Date(2000, month - 1, 1).toLocaleString('default', { month: 'long' });
-            productionDate = `${monthName} 19${year}`;
+            const productionMonth = parseInt(formatCode + year.charAt(0));  // Characters 9-10 for month
+            const modelYear = year.charAt(1) + monthCode;  // Characters 11-12 for year
+            const monthName = new Date(2000, productionMonth - 1, 1).toLocaleString('default', { month: 'long' });
+            productionDate = `${monthName} 19${modelYear}`;
+            modelYearDisplay = `19${modelYear}`;
         } else if (/^[A-L]/.test(formatCode)) {
             // Current Format (1984-Present)
             format = 'Current Format (1984-Present)';
-            const currentMonth = 'ABCDEFGHIJKL'.indexOf(formatCode) + 1;
-            const currentYear = '20' + modelYear.charAt(0);
-            const myear = monthCode + modelYear.charAt(1);
-            productionDate = `${getMonthName(currentMonth)} ${currentYear} (Model Year: 20${myear})`;
+            const month = 'ABCDEFGHIJKL'.indexOf(formatCode) + 1;
+            const monthName = getMonthName(month);
+            const productionYear = '202' + year.charAt(0);  // Character 10 for production year
+            const modelYear = year.charAt(1) + monthCode;   // Characters 11-12 for model year
+            productionDate = `${monthName} ${productionYear}`;
+            modelYearDisplay = `20${modelYear}`;
         }
     } else if (STATES[mfrCode]) {
         manufacturer = `State-Assigned (${STATES[mfrCode]})`;
         format = 'State-Assigned Format';
         const stateMonth = 'ABCDEFGHIJKL'.indexOf(formatCode) + 1;
-        productionDate = `${getMonthName(stateMonth)} 20${modelYear.charAt(0)}`;
+        productionDate = `${getMonthName(stateMonth)} 20${year.charAt(0)}`;
+        modelYearDisplay = '20' + year;
     }
     
     return {
         format,
         manufacturer,
         serial,
-        productionDate
+        productionDate,
+        modelYearDisplay
     };
 }
 
 function displayValidHIN(info) {
     const resultsDiv = document.getElementById('decoder-results');
     resultsDiv.className = 'decoder-results valid';
+    
+    // Check if it's Model Year Format
+    const isModelYearFormat = info.format === 'Model Year Format (1972-1984)';
+    const dateLabel = isModelYearFormat ? 'Production Month' : 'Production Date';
+    
     resultsDiv.innerHTML = `
         <h3>✓ Valid HIN</h3>
         <ul>
             <li><strong>Format:</strong> ${info.format}</li>
             <li><strong>Manufacturer:</strong> ${info.manufacturer}</li>
             <li><strong>Serial Number:</strong> ${info.serial}</li>
-            <li><strong>Production Date:</strong> ${info.productionDate}</li>
+            <li><strong>${dateLabel}:</strong> ${info.productionDate}</li>
+            <li><strong>Model Year:</strong> ${info.modelYearDisplay}</li>
         </ul>
     `;
 }
@@ -294,4 +307,4 @@ function displayInvalidHIN(errors) {
             </ul>
         </ul>
     `;
-}
+} 
